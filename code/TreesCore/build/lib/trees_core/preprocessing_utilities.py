@@ -11,12 +11,13 @@ import PIL
 
 import seaborn as sns
 
+r'''
 sns.set_style('white')
 sns.set_palette('deep')
 sns.set_context('notebook')
 
 plt.rcParams['font.family']='serif'
-
+'''
 
 def image_normalize(im, axis = (0,1), c = 1e-8):
     '''Normalize to zero mean and unit standard deviation along the given axis'''
@@ -121,10 +122,10 @@ def calculateBoundaryWeight(polygonsInArea, scale_polygon = 1.5, output_plot = F
     bounda = gps.overlay(new_cc, tempPolygonDf, how='difference')
     print(bounda)
     if True:#output_plot:
-        fig, ax = plt.subplots(figsize = (5,5))
+        fig, ax = plt.subplots()
         bounda.plot(ax=ax, color = 'red')
-        ax.get_xaxis().set_visible(False)
-        ax.get_yaxis().set_visible(False)
+        #ax.get_xaxis().set_visible(False)
+        #ax.get_yaxis().set_visible(False)
         ax.set(xlabel='Longitude', ylabel='Latitude')
         import random 
         plt.savefig('temp'+str(random.randint(1,10000))+'.png', dpi=150)
