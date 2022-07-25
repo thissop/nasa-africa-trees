@@ -14,7 +14,7 @@ def preprocess(area_files:list,
     warnings.filterwarnings("ignore")
 
     allAreasWithPolygons = []
-    for training_area, training_annotations in tqdm(zip(area_files, annotation_files)): 
+    for training_area, training_annotations in tqdm(zip(area_files, annotation_files), disable=not(verbose)): 
         trainingArea = gps.read_file(training_area)
         trainingPolygon = gps.read_file(training_annotations)
 
@@ -39,7 +39,7 @@ def preprocess(area_files:list,
             print(trainingArea)
         
         # areasWithPolygons contains the object polygons and weighted boundaries for each area!
-        areasWithPolygons = dividePolygonsInTrainingAreas(trainingPolygon, trainingArea, show_boundaries_during_processing=show_boundaries_during_preprocessing)
+        areasWithPolygons = dividePolygonsInTrainingAreas(trainingPolygon, trainingArea, show_boundaries_during_processing=show_boundaries_during_preprocessing, verbose=verbose)
         allAreasWithPolygons.append(areasWithPolygons)
         if verbose: 
             print(f'Assigned training polygons in {len(areasWithPolygons)} training areas and created weighted boundaries for polygons')

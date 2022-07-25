@@ -9,17 +9,26 @@ from shapely.geometry import box
 import json
 import PIL 
 
+import seaborn as sns
+
+sns.set_style('white')
+sns.set_palette('deep')
+sns.set_context('notebook')
+
+plt.rcParams['font.family']='serif'
+
 def image_normalize(im, axis = (0,1), c = 1e-8):
     '''Normalize to zero mean and unit standard deviation along the given axis'''
     return (im - im.mean(axis)) / (im.std(axis) + c)
 
-def calculateBoundaryWeight(polygonsInArea, scale_polygon = 1.5, output_plot = False): 
-    '''
-    For each polygon, create a weighted boundary where the weights of shared/close boundaries is higher than weights of solitary boundaries.
+'''
+def calculateBoundaryWeight(polygonsInArea, scale_polygon = 1.5, output_plot = False, verbose:bool=False): 
+    
+    #For each polygon, create a weighted boundary where the weights of shared/close boundaries is higher than weights of solitary boundaries.
 
-    I.E. Create boundary from polygon file
+    #I.E. Create boundary from polygon file
 
-    '''
+    
     # If there are polygons in a area, the boundary polygons return an empty geo dataframe
     if not polygonsInArea:
         return gps.GeoDataFrame({})
@@ -29,7 +38,7 @@ def calculateBoundaryWeight(polygonsInArea, scale_polygon = 1.5, output_plot = F
     tempPolygonDf = gps.GeoDataFrame(polygonsInArea)
     new_c = []
     #for each polygon in area scale, compare with other polygons:
-    for i in tqdm(range(len(tempPolygonDf))):
+    for i in tqdm(range(len(tempPolygonDf)), disable=not(verbose)):
         #pol1 = gps.GeoSeries(tempPolygonDf.iloc[[i][0])
         #pol1 = gps.GeoSeries(tempPolygonDf.iloc[i][1])
         pol1 = gps.GeoSeries(tempPolygonDf.iloc[i])
@@ -50,6 +59,7 @@ def calculateBoundaryWeight(polygonsInArea, scale_polygon = 1.5, output_plot = F
             if ints.iloc[k]!=None:
                 if ints.iloc[k].is_empty !=1:
                     new_c.append(ints.iloc[k])
+
     new_c = gps.GeoSeries(new_c)
     new_cc = gps.GeoDataFrame({'geometry': new_c})
     new_cc.columns = ['geometry']
@@ -64,13 +74,14 @@ def calculateBoundaryWeight(polygonsInArea, scale_polygon = 1.5, output_plot = F
     bounda.reset_index(drop=True,inplace=True)
     #bounda.to_file('boundary_ready_to_use.shp')
     return bounda
+'''
     
-def calculateBoundaryWeight(polygonsInArea, scale_polygon = 1.5, output_plot = False): 
+def calculateBoundaryWeight(polygonsInArea, scale_polygon = 1.5, output_plot = False, verbose:bool=False): 
     '''
     For each polygon, create a weighted boundary where the weights of shared/close boundaries is higher than weights of solitary boundaries.
    
-   I.E. Create boundary from polygon file
-   '''
+    I.E. Create boundary from polygon file
+    '''
     # If there are polygons in a area, the boundary polygons return an empty geo dataframe
     if not polygonsInArea:
         return gps.GeoDataFrame({})
@@ -80,7 +91,7 @@ def calculateBoundaryWeight(polygonsInArea, scale_polygon = 1.5, output_plot = F
     tempPolygonDf = gps.GeoDataFrame(polygonsInArea)
     new_c = []
     #for each polygon in area scale, compare with other polygons:
-    for i in tqdm(range(len(tempPolygonDf))):
+    for i in tqdm(range(len(tempPolygonDf)), disable=not(verbose)):
         #pol1 = gps.GeoSeries(tempPolygonDf.iloc[[i][0])
         #pol1 = gps.GeoSeries(tempPolygonDf.iloc[i][1])
         pol1 = gps.GeoSeries(tempPolygonDf.iloc[i])
@@ -101,21 +112,28 @@ def calculateBoundaryWeight(polygonsInArea, scale_polygon = 1.5, output_plot = F
             if ints.iloc[k]!=None:
                 if ints.iloc[k].is_empty !=1:
                     new_c.append(ints.iloc[k])
+
+    
     new_c = gps.GeoSeries(new_c)
     new_cc = gps.GeoDataFrame({'geometry': new_c})
     new_cc.columns = ['geometry']
     bounda = gps.overlay(new_cc, tempPolygonDf, how='difference')
-    if output_plot:
-        fig, ax = plt.subplots(figsize = (10,10))
-        bounda.plot(ax=ax,color = 'red')
-        plt.show()
+    print(bounda)
+    if True:#output_plot:
+        fig, ax = plt.subplots(figsize = (5,5))
+        bounda.plot(ax=ax, color = 'red')
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        ax.set(xlabel='Longitude', ylabel='Latitude')
+        import random 
+        plt.savefig('temp'+str(random.randint(1,10000))+'.png', dpi=150)
     #change multipolygon to polygon
     bounda = bounda.explode()
     bounda.reset_index(drop=True,inplace=True)
     #bounda.to_file('boundary_ready_to_use.shp')
     return bounda
 
-def dividePolygonsInTrainingAreas(trainingPolygon, trainingArea, show_boundaries_during_processing:bool):
+def dividePolygonsInTrainingAreas(trainingPolygon, trainingArea, show_boundaries_during_processing:bool, verbose:bool=False):
     '''
 
     As input we received two shapefile, first one contains the training areas/rectangles and other contains the polygon of trees/objects in those training areas
@@ -127,7 +145,7 @@ def dividePolygonsInTrainingAreas(trainingPolygon, trainingArea, show_boundaries
     # For efficiency, assigned polygons are removed from the list, we make a copy here. 
     cpTrainingPolygon = trainingPolygon.copy()
     splitPolygons = {}
-    for i in tqdm(trainingArea.index):
+    for i in tqdm(trainingArea.index, disable=not(verbose)):
         spTemp = []
         allocated = []
         for j in cpTrainingPolygon.index:
@@ -136,7 +154,7 @@ def dividePolygonsInTrainingAreas(trainingPolygon, trainingArea, show_boundaries
                 allocated.append(j)
 
             # Order of bounds: minx miny maxx maxy
-        boundary = calculateBoundaryWeight(spTemp, scale_polygon = 1.5, output_plot = show_boundaries_during_processing)
+        boundary = calculateBoundaryWeight(spTemp, scale_polygon = 1.5, output_plot = show_boundaries_during_processing, verbose=verbose)
         splitPolygons[trainingArea.loc[i]['id']] = {'polygons':spTemp, 'boundaryWeight': boundary, 'bounds':list(trainingArea.bounds.loc[i]),}
         cpTrainingPolygon = cpTrainingPolygon.drop(allocated)
     return splitPolygons
@@ -242,10 +260,6 @@ def findOverlap(img, areasWithPolygons, writePath, imageFilename, annotationFile
     #print(areasWithPolygons)
     
     for areaID, areaInfo in areasWithPolygons.items():
-        print('area ID next')
-        print(areaID)
-        print('area info next')
-        print(areaInfo)
         #Convert the polygons in the area in a dataframe and get the bounds of the area. 
         polygonsInAreaDf = gps.GeoDataFrame(areaInfo['polygons'])
         boundariesInAreaDf = gps.GeoDataFrame(areaInfo['boundaryWeight'])    
@@ -283,7 +297,8 @@ def extractAreasThatOverlapWithTrainingData(inputImages, areasWithPolygons, writ
 
     ncndvi,imOverlapppedAreasNdvi = findOverlap(ndviImg, areasWithPolygons, writePath=writePath, imageFilename=[ndviFilename], annotationFilename=annotationFilename, boundaryFilename=boundaryFilename, bands=bands, writeCounter=writeCounter)
     ncpan, imOverlapppedAreasPan = findOverlap(panImg, areasWithPolygons, writePath=writePath, imageFilename=[panFilename], annotationFilename='', boundaryFilename='', bands=bands, writeCounter=writeCounter)
-    if ncndvi != ncpan: 
+    if ncndvi != ncpan:
+         
         print(ncndvi)
         print(ncpan)  
         raise Exception('Couldnt create mask!!!')
