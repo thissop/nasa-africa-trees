@@ -1,0 +1,9 @@
+setup.py
+trees_core/__init__.py
+trees_core/main.py
+trees_core/preprocessing_utilities.py
+trees_core.egg-info/PKG-INFO
+trees_core.egg-info/SOURCES.txt
+trees_core.egg-info/dependency_links.txt
+trees_core.egg-info/requires.txt
+trees_core.egg-info/top_level.txt
