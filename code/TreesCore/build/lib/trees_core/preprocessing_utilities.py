@@ -22,61 +22,6 @@ plt.rcParams['font.family']='serif'
 def image_normalize(im, axis = (0,1), c = 1e-8):
     '''Normalize to zero mean and unit standard deviation along the given axis'''
     return (im - im.mean(axis)) / (im.std(axis) + c)
-
-'''
-def calculateBoundaryWeight(polygonsInArea, scale_polygon = 1.5, output_plot = False, verbose:bool=False): 
-    
-    #For each polygon, create a weighted boundary where the weights of shared/close boundaries is higher than weights of solitary boundaries.
-
-    #I.E. Create boundary from polygon file
-
-    
-    # If there are polygons in a area, the boundary polygons return an empty geo dataframe
-    if not polygonsInArea:
-        return gps.GeoDataFrame({})
-    #tempPolygonDf = pd.DataFrame(polygonsInArea)
-    #tempPolygonDf.reset_index(drop=True,inplace=True)
-    #tempPolygonDf = gps.GeoDataFrame(tempPolygonDf)
-    tempPolygonDf = gps.GeoDataFrame(polygonsInArea)
-    new_c = []
-    #for each polygon in area scale, compare with other polygons:
-    for i in tqdm(range(len(tempPolygonDf)), disable=not(verbose)):
-        #pol1 = gps.GeoSeries(tempPolygonDf.iloc[[i][0])
-        #pol1 = gps.GeoSeries(tempPolygonDf.iloc[i][1])
-        pol1 = gps.GeoSeries(tempPolygonDf.iloc[i])
-        #print(pol1)
-        #print(type(pol1))
-        sc = pol1.scale(xfact=scale_polygon, yfact=scale_polygon, zfact=scale_polygon, origin='center')
-        scc = pd.DataFrame(columns=['id', 'geometry'])
-        scc = scc.append({'id': None, 'geometry': sc[0]}, ignore_index=True)
-        scc = gps.GeoDataFrame(pd.concat([scc]*len(tempPolygonDf), ignore_index=True))
-
-        pol2 = gps.GeoDataFrame(tempPolygonDf[~tempPolygonDf.index.isin([i])])
-        #scale pol2 also and then intersect, so in the end no need for scale
-        pol2 = gps.GeoDataFrame(pol2.scale(xfact=scale_polygon, yfact=scale_polygon, zfact=scale_polygon, origin='center'))
-        pol2.columns = ['geometry']
-
-        ints = scc.intersection(pol2)
-        for k in range(len(ints)):
-            if ints.iloc[k]!=None:
-                if ints.iloc[k].is_empty !=1:
-                    new_c.append(ints.iloc[k])
-
-    new_c = gps.GeoSeries(new_c)
-    new_cc = gps.GeoDataFrame({'geometry': new_c})
-    new_cc.columns = ['geometry']
-    bounda = gps.overlay(new_cc, tempPolygonDf, how='difference')
-    if output_plot:
-        pass 
-        #fig, ax = plt.subplots(figsize = (10,10))
-        #bounda.plot(ax=ax,color = 'red')
-        #plt.show()
-    #change multipolygon to polygon
-    bounda = bounda.explode()
-    bounda.reset_index(drop=True,inplace=True)
-    #bounda.to_file('boundary_ready_to_use.shp')
-    return bounda
-'''
     
 def calculateBoundaryWeight(polygonsInArea, scale_polygon = 1.5, output_plot = False, verbose:bool=False): 
     '''
@@ -84,51 +29,43 @@ def calculateBoundaryWeight(polygonsInArea, scale_polygon = 1.5, output_plot = F
    
     I.E. Create boundary from polygon file
     '''
+    
     # If there are polygons in a area, the boundary polygons return an empty geo dataframe
     if not polygonsInArea:
         return gps.GeoDataFrame({})
-    #tempPolygonDf = pd.DataFrame(polygonsInArea)
-    #tempPolygonDf.reset_index(drop=True,inplace=True)
-    #tempPolygonDf = gps.GeoDataFrame(tempPolygonDf)
-    tempPolygonDf = gps.GeoDataFrame(polygonsInArea)
-    new_c = []
-    #for each polygon in area scale, compare with other polygons:
-    for i in tqdm(range(len(tempPolygonDf)), disable=not(verbose)):
-        #pol1 = gps.GeoSeries(tempPolygonDf.iloc[[i][0])
-        #pol1 = gps.GeoSeries(tempPolygonDf.iloc[i][1])
-        pol1 = gps.GeoSeries(tempPolygonDf.iloc[i])
-        #print(pol1)
-        #print(type(pol1))
-        sc = pol1.scale(xfact=scale_polygon, yfact=scale_polygon, zfact=scale_polygon, origin='center')
-        scc = pd.DataFrame(columns=['id', 'geometry'])
-        scc = scc.append({'id': None, 'geometry': sc[0]}, ignore_index=True)
-        scc = gps.GeoDataFrame(pd.concat([scc]*len(tempPolygonDf), ignore_index=True))
 
-        pol2 = gps.GeoDataFrame(tempPolygonDf[~tempPolygonDf.index.isin([i])])
-        #scale pol2 also and then intersect, so in the end no need for scale
-        pol2 = gps.GeoDataFrame(pol2.scale(xfact=scale_polygon, yfact=scale_polygon, zfact=scale_polygon, origin='center'))
+    tempPolygonDf = gps.GeoDataFrame(polygonsInArea)
+    scaledPolygonDf = tempPolygonDf.scale(xfact=scale_polygon, yfact=scale_polygon, zfact=scale_polygon, origin='centroid')
+    new_c = []
+
+    #for each polygon in area scale, compare with other polygons:
+    def compare_single(index, scaledPolygonDf=scaledPolygonDf):
+        pol1 = gps.GeoSeries(scaledPolygonDf.iloc[index])
+        scc = pd.DataFrame(columns=['id', 'geometry'])
+        scc = scc.append({'id': None, 'geometry': pol1[0]}, ignore_index=True)
+        scc = gps.GeoDataFrame(pd.concat([scc]*len(scaledPolygonDf), ignore_index=True))
+        pol2 = gps.GeoDataFrame(scaledPolygonDf[~scaledPolygonDf.index.isin([index])])
         pol2.columns = ['geometry']
 
         ints = scc.intersection(pol2)
         for k in range(len(ints)):
-            if ints.iloc[k]!=None:
-                if ints.iloc[k].is_empty !=1:
-                    new_c.append(ints.iloc[k])
+            if ints.iloc[k]!=None and ints.iloc[k].is_empty !=1:
+                    return ints.iloc[k]
 
-    
+    new_c = list(filter(None, [compare_single(index) for index in range(len(tempPolygonDf))]))
+
     new_c = gps.GeoSeries(new_c)
     new_cc = gps.GeoDataFrame({'geometry': new_c})
     new_cc.columns = ['geometry']
     bounda = gps.overlay(new_cc, tempPolygonDf, how='difference')
-    print(bounda)
-    if True:#output_plot:
+    
+    if output_plot:
+        import random 
         fig, ax = plt.subplots()
         bounda.plot(ax=ax, color = 'red')
-        #ax.get_xaxis().set_visible(False)
-        #ax.get_yaxis().set_visible(False)
         ax.set(xlabel='Longitude', ylabel='Latitude')
-        import random 
-        plt.savefig('temp'+str(random.randint(1,10000))+'.png', dpi=150)
+        plt.savefig(f'temp_{random.randint(1,10000)}.png', dpi=150)
+
     #change multipolygon to polygon
     bounda = bounda.explode()
     bounda.reset_index(drop=True,inplace=True)
@@ -159,6 +96,7 @@ def dividePolygonsInTrainingAreas(trainingPolygon, trainingArea, show_boundaries
         boundary = calculateBoundaryWeight(spTemp, scale_polygon = 1.5, output_plot = show_boundaries_during_processing, verbose=verbose)
         splitPolygons[trainingArea.loc[i]['id']] = {'polygons':spTemp, 'boundaryWeight': boundary, 'bounds':list(trainingArea.bounds.loc[i]),}
         cpTrainingPolygon = cpTrainingPolygon.drop(allocated)
+    
     return splitPolygons
 
 def readInputImages(imageBaseDir, rawImageFileType, rawNdviImagePrefix, rawPanImagePrefix):
@@ -224,6 +162,7 @@ def writeExtractedImageAndAnnotation(img, sm, profile, polygonsInAreaDf, boundar
     Write the part of raw image that overlaps with a training area into a separate image file. 
     Use rowColPolygons to create and write annotation and boundary image from polygons in the training area.
     """
+
     try:
         for band, imFn in zip(bands, imagesFilename):
             # Rasterio reads file channel first, so the sm[0] has the shape [1 or ch_count, x,y]
@@ -285,7 +224,7 @@ def findOverlap(img, areasWithPolygons, writePath, imageFilename, annotationFile
             overlapppedAreas.add(areaID)
     return(writeCounter, overlapppedAreas)
 
-def extractAreasThatOverlapWithTrainingData(inputImages, areasWithPolygons, writePath, ndviFilename, panFilename, annotationFilename, boundaryFilename, bands, writeCounter):
+def extractAreasThatOverlapWithTrainingData(i, inputImages, allAreasWithPolygons, writePath, bands, ndviFilename='extracted_ndvi', panFilename='extracted_pan', annotationFilename='extracted_annotation', boundaryFilename='extracted_boundary'):
     """
     Iterates over raw ndvi and pan images and using findOverlap() extract areas that overlap with training data. The overlapping areas in raw images are written in a separate file, and annotation and boundary file are created from polygons in the overlapping areas.
     Note that the intersection with the training areas is performed independently for raw ndvi and pan images. This is not an ideal solution and it can be combined in the future.
@@ -293,6 +232,10 @@ def extractAreasThatOverlapWithTrainingData(inputImages, areasWithPolygons, writ
     if not os.path.exists(writePath):
         os.makedirs(writePath)
         
+    inputImages = inputImages[i]
+    areasWithPolygons=allAreasWithPolygons[i]
+    writeCounter=i 
+
     overlapppedAreas = set()                   
     ndviImg = rasterio.open(inputImages[0])
     panImg = rasterio.open(inputImages[1])

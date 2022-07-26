@@ -1,6 +1,6 @@
 import os 
 
-top_dir = '/mnt/c/Users/Research/Documents/GitHub/nasa-africa-trees/data/first_mosaic/rebuilt_approach/temp/'
+top_dir = '/mnt/c/Users/Research/Documents/GitHub/nasa-africa-trees/data/first_mosaic/rebuilt_approach/input/'
 
 ndvi = []
 pan = []
@@ -19,9 +19,14 @@ for i in os.listdir(top_dir):
         backgrounds.append(path)
 
     elif 'annotations' in i: 
-        annotations.append(path)
+        annotations.append(path) 
 
 from trees_core import preprocess
 
+from time import time 
+
 out_dir = '/mnt/c/Users/Research/Documents/GitHub/nasa-africa-trees/data/first_mosaic/rebuilt_approach/output'
+
+s = time()
 preprocess(area_files=backgrounds, annotation_files=annotations, raw_ndvi_images=ndvi, raw_pan_images=pan, output_path=out_dir)
+print(time()-s)
