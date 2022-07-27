@@ -24,6 +24,8 @@ def preprocess(area_files:list,
 
     warnings.filterwarnings("ignore")
 
+    n_jobs = 2
+
     def preprocess_single(index:int, area_files=area_files, training_annotations=annotation_files): 
         
         trainingArea = gps.read_file(area_files[index])
