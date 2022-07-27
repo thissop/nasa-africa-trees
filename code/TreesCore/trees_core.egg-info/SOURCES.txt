@@ -1,6 +1,8 @@
 setup.py
 trees_core/__init__.py
 trees_core/main.py
+trees_core/make_test_directory.py
+trees_core/old_preprocessing_utilities.py
 trees_core/preprocessing_utilities.py
 trees_core.egg-info/PKG-INFO
 trees_core.egg-info/SOURCES.txt

@@ -29,79 +29,36 @@ def calculateBoundaryWeight(polygonsInArea, scale_polygon = 1.5, output_plot = F
    
     I.E. Create boundary from polygon file
     '''
-    
     # If there are polygons in a area, the boundary polygons return an empty geo dataframe
     if not polygonsInArea:
         return gps.GeoDataFrame({})
-
+    #tempPolygonDf = pd.DataFrame(polygonsInArea)
+    #tempPolygonDf.reset_index(drop=True,inplace=True)
+    #tempPolygonDf = gps.GeoDataFrame(tempPolygonDf)
     tempPolygonDf = gps.GeoDataFrame(polygonsInArea)
-    scaledPolygonDf = tempPolygonDf.scale(xfact=scale_polygon, yfact=scale_polygon, zfact=scale_polygon, origin='centroid')
     new_c = []
-
-    print('len scaledPolygonDf', len(scaledPolygonDf.index))
-
     #for each polygon in area scale, compare with other polygons:
-    def compare_single(index, scaledPolygonDf=scaledPolygonDf):
-        pol1 = gps.GeoSeries(scaledPolygonDf.iloc[index])
+    for i in tqdm(range(len(tempPolygonDf)), disable=not(verbose)):
+        #pol1 = gps.GeoSeries(tempPolygonDf.iloc[[i][0])
+        #pol1 = gps.GeoSeries(tempPolygonDf.iloc[i][1])
+        pol1 = gps.GeoSeries(tempPolygonDf.iloc[i])
+        #print(pol1)
+        #print(type(pol1))
+        sc = pol1.scale(xfact=scale_polygon, yfact=scale_polygon, zfact=scale_polygon, origin='center')
         scc = pd.DataFrame(columns=['id', 'geometry'])
-        scc = scc.append({'id': None, 'geometry': pol1[0]}, ignore_index=True)
-        scc = gps.GeoDataFrame(pd.concat([scc]*len(scaledPolygonDf), ignore_index=True))
-        pol2 = gps.GeoDataFrame(scaledPolygonDf[~scaledPolygonDf.index.isin([index])])
+        scc = scc.append({'id': None, 'geometry': sc[0]}, ignore_index=True)
+        scc = gps.GeoDataFrame(pd.concat([scc]*len(tempPolygonDf), ignore_index=True))
+
+        pol2 = gps.GeoDataFrame(tempPolygonDf[~tempPolygonDf.index.isin([i])])
+        #scale pol2 also and then intersect, so in the end no need for scale
+        pol2 = gps.GeoDataFrame(pol2.scale(xfact=scale_polygon, yfact=scale_polygon, zfact=scale_polygon, origin='center'))
         pol2.columns = ['geometry']
 
         ints = scc.intersection(pol2)
         for k in range(len(ints)):
-            if ints.iloc[k]!=None and ints.iloc[k].is_empty !=1:
-                    return ints.iloc[k]
-
-    new_c = list(filter(None, [compare_single(index) for index in range(len(tempPolygonDf))]))
-
-    print('new_c', 'length:', len(new_c))
-    print(new_c)
-
-    new_c = gps.GeoSeries(new_c)
-    new_cc = gps.GeoDataFrame({'geometry': new_c})
-    new_cc.columns = ['geometry']
-    bounda = gps.overlay(new_cc, tempPolygonDf, how='difference')
-    
-    if output_plot:
-        import random 
-        fig, ax = plt.subplots()
-        bounda.plot(ax=ax, color = 'red')
-        ax.set(xlabel='Longitude', ylabel='Latitude')
-        plt.savefig(f'temp_{random.randint(1,10000)}.png', dpi=150)
-
-    #change multipolygon to polygon
-    bounda = bounda.explode()
-    bounda.reset_index(drop=True,inplace=True)
-    #bounda.to_file('boundary_ready_to_use.shp')
-    return bounda
-
-def calculateBoundaryWeightBetter(polygonsInArea, scale_polygon = 1.5, output_plot = False, verbose:bool=False): 
-    '''
-    For each polygon, create a weighted boundary where the weights of shared/close boundaries is higher than weights of solitary boundaries.
-   
-    I.E. Create boundary from polygon file
-    '''
-    
-    # If there are polygons in a area, the boundary polygons return an empty geo dataframe
-    if not polygonsInArea:
-        return gps.GeoDataFrame({})
-
-    tempPolygonDf = gps.GeoDataFrame(polygonsInArea)
-    scaledPolygonDf = tempPolygonDf.scale(xfact=scale_polygon, yfact=scale_polygon, zfact=scale_polygon, origin='centroid')
-    new_c = []
-
-    length = len(scaledPolygonDf.index)
-    counter = 0
-    for i in range(length-1): 
-        left = scaledPolygonDf.iloc[i]
-        for j in range(i+1, length):
-            right = scaledPolygonDf.iloc[j]
-            int = left.intersection(right)
-            counter +=1 
-            if not int.is_empty: 
-                new_c.append(int)
+            if ints.iloc[k]!=None:
+                if ints.iloc[k].is_empty !=1:
+                    new_c.append(ints.iloc[k])
 
     new_c = gps.GeoSeries(new_c)
     new_cc = gps.GeoDataFrame({'geometry': new_c})
@@ -142,7 +99,7 @@ def dividePolygonsInTrainingAreas(trainingPolygon, trainingArea, show_boundaries
                 allocated.append(j)
 
             # Order of bounds: minx miny maxx maxy
-        boundary = calculateBoundaryWeightBetter(spTemp, scale_polygon = 1.5, output_plot = show_boundaries_during_processing, verbose=verbose)
+        boundary = calculateBoundaryWeight(spTemp, scale_polygon = 1.5, output_plot = show_boundaries_during_processing, verbose=verbose)
         splitPolygons[trainingArea.loc[i]['id']] = {'polygons':spTemp, 'boundaryWeight': boundary, 'bounds':list(trainingArea.bounds.loc[i]),}
         cpTrainingPolygon = cpTrainingPolygon.drop(allocated)
     
