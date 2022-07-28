@@ -39,4 +39,4 @@ s = time()
 old_preprocess(area_files=backgrounds, annotation_files=annotations, raw_ndvi_images=ndvi, raw_pan_images=pan, output_path=out_dir)
 print('Old Time:', time()-s)
 
-# python -m cProfile preprocess.py > profile.txt
+# python -m cProfile -s cumtime preprocess.py > profile.txt &

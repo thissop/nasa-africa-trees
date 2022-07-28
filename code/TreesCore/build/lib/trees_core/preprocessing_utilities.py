@@ -141,7 +141,7 @@ def dividePolygonsInTrainingAreas(trainingPolygon, trainingArea, show_boundaries
                 spTemp.append(cpTrainingPolygon.loc[j])
                 allocated.append(j)
 
-            # Order of bounds: minx miny maxx maxy
+        # Order of bounds: minx miny maxx maxy
         boundary = calculateBoundaryWeightBetter(spTemp, scale_polygon = 1.5, output_plot = show_boundaries_during_processing, verbose=verbose)
         splitPolygons[trainingArea.loc[i]['id']] = {'polygons':spTemp, 'boundaryWeight': boundary, 'bounds':list(trainingArea.bounds.loc[i]),}
         cpTrainingPolygon = cpTrainingPolygon.drop(allocated)
@@ -261,7 +261,7 @@ def findOverlap(img, areasWithPolygons, writePath, imageFilename, annotationFile
             sm = mask(img, [bboxArea], all_touched=True, crop=True )
             profile['height'] = sm[0].shape[1]
             profile['width'] = sm[0].shape[2]
-            profile['transform'] = sm[1]
+            profile['transform'] = sm[1] 
             # That's a problem with rasterio, if the height and the width are less then 256 it throws: ValueError: blockysize exceeds raster height 
             # So I set the blockxsize and blockysize to prevent this problem
             profile['blockxsize'] = 32

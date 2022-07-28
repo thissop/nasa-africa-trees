@@ -2,7 +2,7 @@ from concurrent.futures import process
 
 
 def preprocess(area_files:list, 
-               annotation_files:list,
+               annotation_files:list, 
                raw_ndvi_images:list,
                raw_pan_images:list,
                output_path:str,
@@ -23,8 +23,6 @@ def preprocess(area_files:list,
         n_jobs=cpus
 
     warnings.filterwarnings("ignore")
-
-    n_jobs = 2
 
     def preprocess_single(index:int, area_files=area_files, training_annotations=annotation_files): 
         
