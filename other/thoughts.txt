@@ -1,0 +1,1 @@
+Woah, there are >31 million trainable parameters in the CNN (from UNet output): `Total params: 31,389,889` and `Trainable params: 31,384,129`

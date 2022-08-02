@@ -1,9 +1,11 @@
+import os
+
 def load_train_test(ndvi_images:list,
                     pan_images:list, 
                     annotations:list,
                     boundaries:list,
                     output_path:str, 
-                    normalize:float = 0.4, BATCH_SIZE = 8, NB_EPOCHS = 200, patch_size=(256,256,4), 
+                    normalize:float = 0.4, BATCH_SIZE = 8, patch_size=(256,256,4), 
                     input_shape = (256,256,2), input_image_channel = [0,1], input_label_channel = [2], input_weight_channel = [3]):
     
     r'''
@@ -37,7 +39,6 @@ def load_train_test(ndvi_images:list,
     patch_dir = './patches{}'.format(patch_size[0])
     frames_json = os.path.join(patch_dir,'frames_list.json')
 
-
     # Read all images/frames into memory
     frames = []
 
@@ -62,25 +63,27 @@ def load_train_test(ndvi_images:list,
     val_generator = DataGenerator(input_image_channel, patch_size, validation_frames, frames, annotation_channels, augmenter= None).random_generator(BATCH_SIZE, normalize = normalize)
     test_generator = DataGenerator(input_image_channel, patch_size, testing_frames, frames, annotation_channels, augmenter= None).random_generator(BATCH_SIZE, normalize = normalize)
 
-    return (train_generator, val_generator, test_generator), (input_shape,  input_image_channel, input_label_channel, input_weight_channel)
+    return train_generator, val_generator, test_generator
 
-def train_model(): 
+def train_model(train_generator, val_generator, 
+                input_shape, input_image_channel, input_label_channel,
+                BATCH_SIZE = 8, NB_EPOCHS = 200, VALID_IMG_COUNT = 200, MAX_TRAIN_STEPS = 1000,
+                input_shape = (256,256,2), input_image_channel = [0,1], input_label_channel = [2], input_weight_channel = [3]): 
+    
     from tree_core.original_core.losses import tversky, accuracy, dice_coef, dice_loss, specificity, sensitivity 
-    from tree_core.original_core.optimizers import adaDelta, adagrad, adam, nadam 
+    from tree_core.original_core.optimizers import adaDelta 
     import time 
     from functools import reduce 
+    from tensorflow.keras.models import load_model
+    from trees_core.UNetTraining import train_model, load_train_test
+    from trees_core.original_core.Unet import UNet 
 
     OPTIMIZER = adaDelta
     LOSS = tversky 
 
-    #Only for the name of the model in the very end
+    # Only for the name of the model in the very end
     OPTIMIZER_NAME = 'AdaDelta'
     LOSS_NAME = 'weightmap_tversky'
-
-    generator_tuple, input_info_tuple = load_train_test()
-    train_generator, val_generator, test_generator = generator_tuple
-    input_shape,  input_image_channel, input_label_channel, input_weight_channel = input_info_tuple
-
 
     # Declare the path to the final model
     # If you want to retrain an exising model then change the cell where model is declared. 
@@ -102,8 +105,69 @@ def train_model():
     # weight_path=weight_path + "{}_weights.best.hdf5".format('UNet_model')
     # print(weight_path)
 
+    # Define the model and compile it
+    model = UNet([BATCH_SIZE,input_shape], input_label_channel) # *config.input_shape had asterisk originally?
+    model.compile(optimizer=OPTIMIZER, loss=LOSS, metrics=[dice_coef, dice_loss, specificity, sensitivity, accuracy])
 
-import os
+    # Define callbacks for the early stopping of training, LearningRateScheduler and model checkpointing
+    from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler, EarlyStopping, ReduceLROnPlateau, TensorBoard
+
+
+    checkpoint = ModelCheckpoint(model_path, monitor='val_loss', verbose=1, 
+                                save_best_only=True, mode='min', save_weights_only = False)
+
+    #reduceonplatea; It can be useful when using adam as optimizer
+    #Reduce learning rate when a metric has stopped improving (after some patience,reduce by a factor of 0.33, new_lr = lr * factor).
+    #cooldown: number of epochs to wait before resuming normal operation after lr has been reduced.
+    reduceLROnPlat = ReduceLROnPlateau(monitor='val_loss', factor=0.33,
+                                    patience=4, verbose=1, mode='min',
+                                    min_delta=0.0001, cooldown=4, min_lr=1e-16)
+
+    #early = EarlyStopping(monitor="val_loss", mode="min", verbose=2, patience=15)
+
+    log_dir = os.path.join('./logs','UNet_{}_{}_{}_{}_{}'.format(timestr,OPTIMIZER_NAME,LOSS_NAME, chs, input_shape[0]))
+    tensorboard = TensorBoard(log_dir=log_dir, histogram_freq=0, write_graph=True, write_grads=False, write_images=False, embeddings_freq=0, embeddings_layer_names=None, embeddings_metadata=None, embeddings_data=None, update_freq='epoch')
+
+    callbacks_list = [checkpoint, tensorboard] #reduceLROnPlat is not required with adaDelta
+
+    # do training 
+    loss_history = [model.fit(train_generator, 
+                            steps_per_epoch=MAX_TRAIN_STEPS, 
+                            epochs=NB_EPOCHS, 
+                            validation_data=val_generator,
+                            validation_steps=VALID_IMG_COUNT,
+                            callbacks=callbacks_list, workers=1, use_multiprocessing=True)] # the generator is not very thread safe
+
+    return model, loss_history
+
+def load_trained_model(model_path): 
+    from tree_core.original_core.losses import tversky, accuracy, dice_coef, dice_loss, specificity, sensitivity 
+    from tree_core.original_core.optimizers import adaDelta 
+    from tensorflow.keras.models import load_model   
+
+    OPTIMIZER = adaDelta
+    LOSS = tversky
+
+    # Load model after training
+    # If you load a model with different python version, than you may run into a problem: https://github.com/keras-team/keras/issues/9595#issue-303471777
+
+    model = load_model(model_path, custom_objects={'tversky': LOSS, 'dice_coef': dice_coef, 'dice_loss':dice_loss, 'accuracy':accuracy , 'specificity': specificity, 'sensitivity':sensitivity}, compile=False)
+
+    # In case you want to use multiple GPU you can uncomment the following lines.
+    # from tensorflow.python.keras.utils import multi_gpu_model
+    # model = multi_gpu_model(model, gpus=2, cpu_merge=False)
+
+    model.compile(optimizer=OPTIMIZER, loss=LOSS, metrics=[dice_coef, dice_loss, accuracy, specificity, sensitivity])
+
+    return model
+
+
+# TO DO # 
+
+'''
+> integrate these into smooth main function. 
+> build test model function. 
+'''
 
 # Configuration of the parameters for the 2-UNetTraining.ipynb notebook
 class Configuration: 

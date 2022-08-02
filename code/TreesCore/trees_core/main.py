@@ -1,6 +1,3 @@
-from concurrent.futures import process
-
-
 def preprocess(area_files:list, 
                annotation_files:list, 
                raw_ndvi_images:list,
