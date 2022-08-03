@@ -5,7 +5,7 @@ def preprocess(area_files:list,
                output_path:str,
                bands=[0],
                show_boundaries_during_preprocessing:bool=False, verbose:bool=False, 
-               n_jobs:int=4):
+               n_jobs:int=4): 
 
     import geopandas as gps
     from trees_core.preprocessing_utilities import extractAreasThatOverlapWithTrainingData, dividePolygonsInTrainingAreas
@@ -143,8 +143,37 @@ def old_preprocess(area_files:list,
     # partial lets you set constant values to all arguments which are not changed during parallel processing. 
     # however, the variable input needs to always be the first argument of the function being parallelized.  
 
-def train(): 
-    pass 
+def train(ndvi_images:list,
+          pan_images:list, 
+          annotations:list,
+          boundaries:list): 
+
+    r'''
+    
+    Arguments 
+    ---------
+
+    ndvi_images : list 
+        List of full file paths to the extracted ndvi images 
+
+    pan_images : list 
+        Same as ndvi_images except for pan 
+
+    boundaries : list
+        List of boundary files extracted during the preproccessing step 
+
+    annotations : list
+        List of the full file paths to the extracted annotations outputed during the preproccessing step. 
+    
+    '''
+        
+    from trees_core.training_utilities import load_train_test, train_model
+    
+    train_generator, val_generator, test_generator = load_train_test(ndvi_images=ndvi_images, pan_images=pan_images, annotations=annotations, boundaries=boundaries)
+
+    model, loss_history = train_model(train_generator=train_generator, val_generator=val_generator)
+
+    return model, loss_history
 
 def evaluate():
     pass 

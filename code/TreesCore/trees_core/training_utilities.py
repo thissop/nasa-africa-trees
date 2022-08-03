@@ -1,10 +1,9 @@
-import os
+import os 
 
 def load_train_test(ndvi_images:list,
                     pan_images:list, 
                     annotations:list,
                     boundaries:list,
-                    output_path:str, 
                     normalize:float = 0.4, BATCH_SIZE = 8, patch_size=(256,256,4), 
                     input_shape = (256,256,2), input_image_channel = [0,1], input_label_channel = [2], input_weight_channel = [3]):
     
@@ -66,17 +65,16 @@ def load_train_test(ndvi_images:list,
     return train_generator, val_generator, test_generator
 
 def train_model(train_generator, val_generator, 
-                input_shape, input_image_channel, input_label_channel,
                 BATCH_SIZE = 8, NB_EPOCHS = 200, VALID_IMG_COUNT = 200, MAX_TRAIN_STEPS = 1000,
-                input_shape = (256,256,2), input_image_channel = [0,1], input_label_channel = [2], input_weight_channel = [3]): 
+                input_shape = (256,256,2), input_image_channel = [0,1], input_label_channel = [2], input_weight_channel = [3], 
+                model_path = './saved_models/UNet/'): 
     
-    from tree_core.original_core.losses import tversky, accuracy, dice_coef, dice_loss, specificity, sensitivity 
-    from tree_core.original_core.optimizers import adaDelta 
+    from trees_core.original_core.losses import tversky, accuracy, dice_coef, dice_loss, specificity, sensitivity 
+    from trees_core.original_core.optimizers import adaDelta 
     import time 
     from functools import reduce 
-    from tensorflow.keras.models import load_model
-    from trees_core.UNetTraining import train_model, load_train_test
-    from trees_core.original_core.Unet import UNet 
+    from trees_core.original_core.UNet import UNet 
+    from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler, EarlyStopping, ReduceLROnPlateau, TensorBoard
 
     OPTIMIZER = adaDelta
     LOSS = tversky 
@@ -110,7 +108,6 @@ def train_model(train_generator, val_generator,
     model.compile(optimizer=OPTIMIZER, loss=LOSS, metrics=[dice_coef, dice_loss, specificity, sensitivity, accuracy])
 
     # Define callbacks for the early stopping of training, LearningRateScheduler and model checkpointing
-    from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler, EarlyStopping, ReduceLROnPlateau, TensorBoard
 
 
     checkpoint = ModelCheckpoint(model_path, monitor='val_loss', verbose=1, 
@@ -141,8 +138,8 @@ def train_model(train_generator, val_generator,
     return model, loss_history
 
 def load_trained_model(model_path): 
-    from tree_core.original_core.losses import tversky, accuracy, dice_coef, dice_loss, specificity, sensitivity 
-    from tree_core.original_core.optimizers import adaDelta 
+    from trees_core.original_core.losses import tversky, accuracy, dice_coef, dice_loss, specificity, sensitivity 
+    from trees_core.original_core.optimizers import adaDelta 
     from tensorflow.keras.models import load_model   
 
     OPTIMIZER = adaDelta

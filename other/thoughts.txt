@@ -1,1 +1,13 @@
 Woah, there are >31 million trainable parameters in the CNN (from UNet output): `Total params: 31,389,889` and `Trainable params: 31,384,129`
+
+current error message: 
+```
+self._dims = [Dimension(d) for d in dims]
+File "/home/yaroslav/miniconda3/envs/trees/lib/python3.7/site-packages/tensorflow/python/framework/tensor_shape.py", line 758, in <listcomp>
+self._dims = [Dimension(d) for d in dims]
+File "/home/yaroslav/miniconda3/envs/trees/lib/python3.7/site-packages/tensorflow/python/framework/tensor_shape.py", line 206, in __init__
+.format(value, type(value))), None)
+File "<string>", line 3, in raise_from
+TypeError: Dimension value must be integer or None or have an __index__ method, got value '(256, 256, 2)' with type '<class 'tuple'>'
+(trees) yaroslav@DESKTOP-KRPL43A:/mnt/c/Users/Research/Documents/GitHub/nasa-africa-trees$ 
+```

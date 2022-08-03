@@ -6,7 +6,6 @@ import numpy as np
 import rasterio 
 import geopandas as gps
 from shapely.geometry import box
-import json
 import PIL 
 
 import seaborn as sns
@@ -199,11 +198,11 @@ def rowColPolygons(areaDf, areaShape, profile, filename, outline, fill):
         row, col = rasterio.transform.rowcol(transform, a, b)
         zipped = list(zip(row,col)) #[list(rc) for rc in list(zip(row,col))]
         polygons.append(zipped)
-    with open(filename, 'w') as outfile:  
-        json.dump({'Trees': polygons}, outfile)
+    #with open(filename, 'w') as outfile:  
+    #    json.dump({'Trees': polygons}, outfile)
     mask = drawPolygons(polygons,areaShape, outline=outline, fill=fill)    
     profile['dtype'] = rasterio.int16
-    with rasterio.open(filename.replace('json', 'png'), 'w', **profile) as dst:
+    with rasterio.open(filename, 'w', **profile) as dst:
         dst.write(mask.astype(rasterio.int16), 1)
 
 def writeExtractedImageAndAnnotation(img, sm, profile, polygonsInAreaDf, boundariesInAreaDf, writePath, imagesFilename, annotationFilename, boundaryFilename, bands, writeCounter, normalize=True):
@@ -222,16 +221,14 @@ def writeExtractedImageAndAnnotation(img, sm, profile, polygonsInAreaDf, boundar
             with rasterio.open(os.path.join(writePath, imFn+'_{}.png'.format(writeCounter)), 'w', **profile) as dst:
                     dst.write(dt, 1) 
         
-        # not using anymore ? # 
-
         if annotationFilename:
-            annotation_json_filepath = os.path.join(writePath,annotationFilename+'_{}.json'.format(writeCounter))
+            annotation_filepath = os.path.join(writePath,annotationFilename+'_{}.png'.format(writeCounter))
             # The object is given a value of 1, the outline or the border of the object is given a value of 0 and rest of the image/background is given a a value of 0
-            rowColPolygons(polygonsInAreaDf,(sm[0].shape[1], sm[0].shape[2]), profile, annotation_json_filepath, outline=0, fill = 1)
+            rowColPolygons(polygonsInAreaDf,(sm[0].shape[1], sm[0].shape[2]), profile, annotation_filepath, outline=0, fill = 1)
         if boundaryFilename:
-            boundary_json_filepath = os.path.join(writePath,boundaryFilename+'_{}.json'.format(writeCounter))
+            boundary_filepath = os.path.join(writePath,boundaryFilename+'_{}.png'.format(writeCounter))
             # The boundaries are given a value of 1, the outline or the border of the boundaries is also given a value of 1 and rest is given a value of 0
-            rowColPolygons(boundariesInAreaDf,(sm[0].shape[1], sm[0].shape[2]), profile, boundary_json_filepath, outline=1 , fill=1)
+            rowColPolygons(boundariesInAreaDf,(sm[0].shape[1], sm[0].shape[2]), profile, boundary_filepath, outline=1 , fill=1)
         return(writeCounter+1)
     except Exception as e:
         print(e)
