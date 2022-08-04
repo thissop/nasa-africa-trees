@@ -104,7 +104,10 @@ def train_model(train_generator, val_generator,
     # print(weight_path)
 
     # Define the model and compile it
-    model = UNet([BATCH_SIZE,input_shape], input_label_channel) # *config.input_shape had asterisk originally?
+    print('\n')
+    print([BATCH_SIZE, *input_shape])
+    print('\n')
+    model = UNet([BATCH_SIZE, *input_shape], input_label_channel) # *config.input_shape had asterisk originally?
     model.compile(optimizer=OPTIMIZER, loss=LOSS, metrics=[dice_coef, dice_loss, specificity, sensitivity, accuracy])
 
     # Define callbacks for the early stopping of training, LearningRateScheduler and model checkpointing

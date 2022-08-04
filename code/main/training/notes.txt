@@ -1,0 +1,9 @@
+
+
+8/4/2022: current error: 
+```
+an = self.annotations[i:i + img_size[0], j:j + img_size[1]]
+IndexError: too many indices for array
+```
+update: I just checked, all quadruplets of images (annotation, boundary, ndvi, and pan for a given ID) have the same dimensions (see `code/main/training/check_sizes.py`), so I wonder if it has to do with individual images being different dimensions from other images of different patches?
+
